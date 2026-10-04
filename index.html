@@ -16,8 +16,7 @@
     --accent: #d6402b;
     --accent-soft: rgba(214, 64, 43, 0.12);
     --c-total: #d6402b;
-    --c-pit: #2f6fdb;
-    --c-pen: #c08a00;
+    --c-opt: #1a9b55;
     --grid: rgba(0, 0, 0, 0.07);
     --radius: 14px;
     color-scheme: light;
@@ -32,8 +31,7 @@
       --accent: #ff6a52;
       --accent-soft: rgba(255, 106, 82, 0.14);
       --c-total: #ff6a52;
-      --c-pit: #6b9bff;
-      --c-pen: #e5b23a;
+      --c-opt: #3ccf7f;
       --grid: rgba(255, 255, 255, 0.08);
       color-scheme: dark;
     }
@@ -47,8 +45,7 @@
     --accent: #ff6a52;
     --accent-soft: rgba(255, 106, 82, 0.14);
     --c-total: #ff6a52;
-    --c-pit: #6b9bff;
-    --c-pen: #e5b23a;
+    --c-opt: #3ccf7f;
     --grid: rgba(255, 255, 255, 0.08);
     color-scheme: dark;
   }
@@ -241,7 +238,7 @@
 <div class="wrap">
   <header>
     <h1>🏁 Калькулятор риска питстопов</h1>
-    <p>Сколько времени стоит запас при выезде из питов в картинговом марафоне</p>
+    <p>Как минимизировать время на питах и не нахватать штрафов</p>
   </header>
 
   <div class="layout">
@@ -264,9 +261,9 @@
       </div>
 
       <div class="field">
-        <label for="a">Разброс выезда, ±a</label>
-        <div class="input-unit"><input id="a" type="number" inputmode="decimal" min="0" step="0.05" value="0.5"><span>с</span></div>
-        <span class="hint">Полуширина: фактический выезд в пределах ±разброс от целевого момента</span>
+        <label for="a">Диапазон разброса выезда, X</label>
+        <div class="input-unit"><input id="a" type="number" inputmode="decimal" min="0" step="0.05" value="1.3"><span>с</span></div>
+        <span class="hint">Насколько реальный момент выезда отличается от задуманного. Пилот хочет уехать ровно в целевое время Tt, но реакция, трафик на пит-лейне, постановка карта, старт карта дают ошибку: выезд случается раньше или позже задуманного. X — полная ширина диапазона: выезд в пределах от Tt − X/2 до Tt + X/2. Ошибка случайная и новая на каждом питстопе — заранее её не знаешь.</span>
       </div>
 
       <div class="field">
@@ -281,9 +278,10 @@
       </div>
 
       <div class="field">
-        <label for="d">Запас при выезде, D</label>
-        <div class="input-unit"><input id="d" type="number" inputmode="decimal" min="0" max="5" step="0.05" value="0.5"><span>с</span></div>
-        <input id="d-range" type="range" min="0" max="5" step="0.05" value="0.5" aria-label="Запас при выезде">
+        <label for="tt">Целевое время выезда, Tt</label>
+        <div class="input-unit"><input id="tt" type="number" inputmode="decimal" min="0" step="0.05" value="150.5"><span>с</span></div>
+        <input id="tt-range" type="range" min="150" max="155" step="0.05" value="150.5" aria-label="Целевое время выезда">
+        <span class="hint" id="tt-hint"></span>
       </div>
     </section>
 
@@ -312,20 +310,20 @@
       </div>
 
       <section class="card chart-card" aria-label="График">
-        <h2>Общее потерянное время t = F(D)</h2>
+        <h2>Общее потерянное время t = F(Tt)</h2>
         <div class="chart-box"><canvas id="chart"></canvas></div>
       </section>
 
       <details class="method card">
         <summary>Как считается</summary>
-        <p>Пилот целится выехать через <code>Tm + D</code>. Фактическое время питстопа <code>T = Tm + D + e</code>, где <code>e</code> — случайная ошибка выезда, независимая для каждого питстопа.</p>
+        <p>Пилот целится выехать в момент <code>Tt</code>, то есть с запасом <code>D = Tt − Tm</code> над минимумом. Фактическое время питстопа <code>T = Tt + e</code>, где <code>e</code> — случайная ошибка выезда, независимая для каждого питстопа.</p>
         <ul>
           <li>Штраф, если <code>T &lt; Tm</code>, то есть <code>e &lt; −D</code>. Вероятность на одном пите — <code>p</code>.</li>
           <li>Потеря на пите — <code>max(T − Tm, 0)</code>: выигрыш от короткого (штрафного) пита не засчитывается.</li>
           <li>Риск хотя бы одного штрафа — <code>1 − (1 − p)<sup>N</sup></code>, ожидаемое число штрафов — <code>N·p</code>.</li>
           <li>Потеря на штрафах — <code>N·p·P</code>. Общая потеря — сумма потерь на питах и штрафах.</li>
-          <li><code>a</code> — заданный разброс выезда (полуширина). Равномерный разброс: <code>e ∈ [−a; +a]</code>.</li>
-          <li>Нормальный разброс: <code>σ = a / 2</code>, то есть ~95% выездов в пределах ±a, а редкие сильные ошибки (замешкался, отвлёкся) всё же возможны. Хвосты не обрезаются.</li>
+          <li><code>X</code> — полный диапазон разброса выезда, <code>a = X / 2</code> — его половина: выезд в пределах <code>Tt ± a</code>. Равномерный разброс: <code>e ∈ [−X/2; +X/2]</code>.</li>
+          <li>Нормальный разброс: <code>σ = X / 4</code>, то есть ~95% выездов в пределах ±X/2, а редкие сильные ошибки (замешкался, отвлёкся) всё же возможны. Хвосты не обрезаются.</li>
         </ul>
         <p>Расчёт аналитический, без симуляций.</p>
       </details>
@@ -336,7 +334,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
 (() => {
-  const D_MAX = 5;
+  // Chart range: Tt from Tm to Tm + D_MAX
+  const D_MAX = 2;
   const D_STEP = 0.1;
 
   // Abramowitz–Stegun 7.1.26, |error| < 1.5e-7
@@ -352,7 +351,7 @@
 
   // Per-pit penalty probability p and expected pit loss E[max(D + e, 0)]
   function perPit(D, a, dist) {
-    if (a <= 0) return { p: 0, loss: Math.max(D, 0) };
+    if (a <= 0) return D < 0 ? { p: 1, loss: 0 } : { p: 0, loss: D };
     if (dist === 'uniform') {
       const lo = D - a, hi = D + a;
       if (lo >= 0) return { p: 0, loss: D };
@@ -362,6 +361,19 @@
     const sigma = a / 2;
     const z = D / sigma;
     return { p: normCdf(-z), loss: D * normCdf(z) + sigma * normPdf(z) };
+  }
+
+  // Margin D minimizing total loss: grid search over [0, D_MAX + range]
+  function optimalD(params) {
+    const step = 0.001;
+    const limit = D_MAX + 2 * params.a;
+    let best = 0, bestTotal = Infinity;
+    for (let i = 0; i * step <= limit; i++) {
+      const D = i * step;
+      const total = compute(params, D).total;
+      if (total < bestTotal) { best = D; bestTotal = total; }
+    }
+    return { d: best, total: bestTotal };
   }
 
   function compute(params, D) {
@@ -386,13 +398,16 @@
   };
 
   function readParams() {
+    const tm = num('tm', 0, 0);
+    const tt = num('tt', 0, tm);
     return {
+      tt,
+      d: tt - tm,
       n: Math.round(num('n', 1, 1)),
       tm: num('tm', 0, 0),
       pen: num('p', 0, 0),
-      a: num('a', 0, 0),
+      a: num('a', 0, 0) / 2, // half-width of the entered full range X
       dist: document.querySelector('input[name="dist"]:checked').value,
-      d: Math.min(num('d', 0, 0), D_MAX),
     };
   }
 
@@ -412,8 +427,8 @@
 
   // Chart
   const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  const labels = [];
-  for (let i = 0; i <= Math.round(D_MAX / D_STEP); i++) labels.push(+(i * D_STEP).toFixed(1));
+  const offsets = [];
+  for (let i = 0; i <= Math.round(D_MAX / D_STEP); i++) offsets.push(+(i * D_STEP).toFixed(1));
 
   let chart = null;
 
@@ -425,12 +440,10 @@
     chart = new Chart($('chart'), {
       type: 'line',
       data: {
-        labels,
         datasets: [
           { label: 'Общая потеря', data: [], borderColor: css('--c-total'), backgroundColor: css('--c-total'), borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 4, tension: 0.25, order: 1 },
-          { label: 'На питстопах', data: [], borderColor: css('--c-pit'), backgroundColor: css('--c-pit'), borderWidth: 1.5, borderDash: [5, 4], pointRadius: 0, pointHoverRadius: 3, tension: 0.25, order: 2 },
-          { label: 'На штрафах', data: [], borderColor: css('--c-pen'), backgroundColor: css('--c-pen'), borderWidth: 1.5, borderDash: [5, 4], pointRadius: 0, pointHoverRadius: 3, tension: 0.25, order: 3 },
-          { label: 'Текущий D', type: 'scatter', data: [], borderColor: css('--text'), backgroundColor: css('--surface'), borderWidth: 2, pointRadius: 6, pointHoverRadius: 7, order: 0 },
+          { label: 'Текущее Tt', type: 'scatter', data: [], borderColor: css('--text'), backgroundColor: css('--surface'), borderWidth: 2, pointRadius: 6, pointHoverRadius: 7, order: 0 },
+          { label: 'Оптимальное Tt', type: 'scatter', data: [], borderColor: css('--c-opt'), backgroundColor: css('--c-opt'), borderWidth: 2, pointStyle: 'rectRot', pointRadius: 7, pointHoverRadius: 8, order: 0 },
         ],
       },
       options: {
@@ -441,10 +454,8 @@
         scales: {
           x: {
             type: 'linear',
-            min: 0,
-            max: D_MAX,
-            title: { display: true, text: 'Запас D, с', color: text },
-            ticks: { color: text, stepSize: 0.5 },
+            title: { display: true, text: 'Целевое время выезда Tt, с', color: text },
+            ticks: { color: text, stepSize: 0.25, callback: v => fmtNum(v, 2) },
             grid: { color: grid },
           },
           y: {
@@ -455,11 +466,21 @@
           },
         },
         plugins: {
-          legend: { labels: { color: text, boxWidth: 14, boxHeight: 2, sort: (a, b) => a.datasetIndex - b.datasetIndex } },
+          legend: {
+            labels: {
+              color: text,
+              usePointStyle: true,
+              boxHeight: 8,
+              sort: (a, b) => a.datasetIndex - b.datasetIndex,
+              // Line icon for the curve, the dataset's own point style for markers
+              generateLabels: c => Chart.defaults.plugins.legend.labels.generateLabels(c)
+                .map(item => item.datasetIndex === 0 ? { ...item, pointStyle: 'line' } : item),
+            },
+          },
           tooltip: {
-            filter: item => item.datasetIndex !== 3,
+            filter: item => item.datasetIndex === 0,
             callbacks: {
-              title: items => 'D = ' + fmtNum(items[0].parsed.x, 1) + ' с',
+              title: items => 'Tt = ' + fmtNum(items[0].parsed.x, 1) + ' с',
               label: item => ' ' + item.dataset.label + ': ' + fmtTime(item.parsed.y),
             },
           },
@@ -470,18 +491,20 @@
 
   function updateChart(params) {
     if (!chart) return;
-    const total = [], pit = [], pen = [];
-    for (const D of labels) {
+    const total = [];
+    for (const D of offsets) {
       const r = compute(params, D);
-      total.push({ x: D, y: r.total });
-      pit.push({ x: D, y: r.pitLoss });
-      pen.push({ x: D, y: r.penLoss });
+      const x = params.tm + D;
+      total.push({ x, y: r.total });
     }
     const cur = compute(params, params.d);
+    chart.options.scales.x.min = params.tm;
+    chart.options.scales.x.max = params.tm + D_MAX;
     chart.data.datasets[0].data = total;
-    chart.data.datasets[1].data = pit;
-    chart.data.datasets[2].data = pen;
-    chart.data.datasets[3].data = [{ x: params.d, y: cur.total }];
+    chart.data.datasets[1].data = [{ x: params.tt, y: cur.total }];
+    const opt = optimalD(params);
+    chart.data.datasets[2].data = [{ x: params.tm + opt.d, y: opt.total }];
+    chart.data.datasets[2].label = 'Оптимальное Tt = ' + fmtNum(params.tm + opt.d, 2) + ' с (' + fmtTime(opt.total) + ')';
     chart.update();
   }
 
@@ -498,6 +521,13 @@
     $('r-total').textContent = fmtTime(r.total);
     $('r-total-sub').textContent = fmtNum(r.total / params.n, 2) + ' с на пит';
 
+    $('tt-hint').textContent = params.d < 0
+      ? 'Tt меньше Tm на ' + fmtNum(-params.d, 2) + ' с — штраф почти гарантирован'
+      : 'Запас над минимумом: D = Tt − Tm = ' + fmtNum(params.d, 2) + ' с';
+    $('tt-range').min = params.tm;
+    $('tt-range').max = params.tm + D_MAX;
+    $('tt-range').value = params.tt;
+
     $('dist-hint').textContent = params.dist === 'normal'
       ? 'σ = ' + fmtNum(params.a / 2, 2) + ' с, ~95% выездов в пределах ±' + fmtNum(params.a, 2) + ' с'
       : 'Любая ошибка в пределах ±' + fmtNum(params.a, 2) + ' с равновероятна';
@@ -506,9 +536,18 @@
   }
 
   // Inputs
-  $('d').addEventListener('input', () => { $('d-range').value = $('d').value; render(); });
-  $('d-range').addEventListener('input', () => { $('d').value = $('d-range').value; render(); });
-  for (const id of ['n', 'tm', 'p', 'a']) $(id).addEventListener('input', render);
+  $('tt').addEventListener('input', render);
+  $('tt-range').addEventListener('input', () => { $('tt').value = $('tt-range').value; render(); });
+  // Changing Tm shifts Tt by the same amount so the margin D stays put
+  let prevTm = num('tm', 0, 0);
+  $('tm').addEventListener('input', () => {
+    const tm = num('tm', 0, 0);
+    const tt = num('tt', 0, prevTm);
+    $('tt').value = +(tt + tm - prevTm).toFixed(2);
+    prevTm = tm;
+    render();
+  });
+  for (const id of ['n', 'p', 'a']) $(id).addEventListener('input', render);
   for (const el of document.querySelectorAll('input[name="dist"]')) el.addEventListener('change', render);
 
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { buildChart(); render(); });
@@ -519,3 +558,10 @@
 </script>
 </body>
 </html>
+
+
+
+=S2-AVERAGE(FLATTEN(
+  INDIRECT("P1!I"&XMATCH(N2, 'P1'!J:J, 1)&":I"&(XMATCH(N2, 'P1'!J:J, 1)+R2-1)), 
+  INDIRECT("P2!I"&XMATCH(N2, 'P2'!J:J, 1)&":I"&(XMATCH(N2, 'P2'!J:J, 1)+R2-1)), 
+  INDIRECT("P3!I"&XMATCH(N2, 'P3'!J:J, 1)&":I"&(XMATCH(N2, 'P3'!J:J, 1)+R2-1))))
