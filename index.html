@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Калькулятор риска питстопов</title>
+<meta name="description" content="Оценка выгоды от рискованных выездов из питов в картинговых марафонах">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏁</text></svg>">
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --border: #e3e6ea;
+    --text: #15181d;
+    --muted: #5f6873;
+    --accent: #d6402b;
+    --accent-soft: rgba(214, 64, 43, 0.12);
+    --c-total: #d6402b;
+    --c-pit: #2f6fdb;
+    --c-pen: #c08a00;
+    --grid: rgba(0, 0, 0, 0.07);
+    --radius: 14px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1114;
+      --surface: #181b20;
+      --border: #2a2f36;
+      --text: #e8eaed;
+      --muted: #9aa3ad;
+      --accent: #ff6a52;
+      --accent-soft: rgba(255, 106, 82, 0.14);
+      --c-total: #ff6a52;
+      --c-pit: #6b9bff;
+      --c-pen: #e5b23a;
+      --grid: rgba(255, 255, 255, 0.08);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1114;
+    --surface: #181b20;
+    --border: #2a2f36;
+    --text: #e8eaed;
+    --muted: #9aa3ad;
+    --accent: #ff6a52;
+    --accent-soft: rgba(255, 106, 82, 0.14);
+    --c-total: #ff6a52;
+    --c-pit: #6b9bff;
+    --c-pen: #e5b23a;
+    --grid: rgba(255, 255, 255, 0.08);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+  }
+  header h1 {
+    margin: 0 0 4px;
+    font-size: clamp(1.4rem, 4vw, 1.9rem);
+    letter-spacing: -0.01em;
+  }
+  header p {
+    margin: 0 0 24px;
+    color: var(--muted);
+  }
+
+  .layout {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .layout > * { min-width: 0; }
+  @media (min-width: 900px) {
+    .layout { grid-template-columns: 340px minmax(0, 1fr); align-items: start; }
+    .inputs { position: sticky; top: 16px; }
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+  }
+  .card h2 {
+    margin: 0 0 14px;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label {
+    display: block;
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+  }
+  .field .hint {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .input-unit {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+    overflow: hidden;
+  }
+  .input-unit:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .input-unit input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    padding: 10px 12px;
+    outline: none;
+  }
+  .input-unit span {
+    padding: 0 12px;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  .seg {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+  }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg label {
+    margin: 0;
+    text-align: center;
+    padding: 8px 6px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 0.88rem;
+    color: var(--muted);
+  }
+  .seg input:checked + label {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  }
+  .seg input:focus-visible + label { outline: 2px solid var(--accent); }
+
+  input[type="range"] {
+    width: 100%;
+    margin-top: 10px;
+    accent-color: var(--accent);
+  }
+
+  .results {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 1fr 1fr;
+  }
+  @media (min-width: 640px) {
+    .results { grid-template-columns: repeat(4, 1fr); }
+  }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    min-width: 0;
+  }
+  .stat .label {
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.3;
+    min-height: 2.6em;
+  }
+  .stat .value {
+    font-size: clamp(1.3rem, 3.5vw, 1.7rem);
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    margin-top: 6px;
+    letter-spacing: -0.01em;
+  }
+  .stat .sub {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat.total { border-color: var(--accent); background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--surface); }
+  .stat.total .value { color: var(--accent); }
+
+  .chart-card { margin-top: 16px; }
+  .chart-box {
+    position: relative;
+    height: 340px;
+  }
+  @media (max-width: 520px) {
+    .chart-box { height: 280px; }
+  }
+
+  details.method {
+    margin-top: 16px;
+    font-size: 0.9rem;
+  }
+  details.method summary {
+    cursor: pointer;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  details.method p, details.method li { color: var(--muted); }
+  details.method code {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 1px 5px;
+    border-radius: 5px;
+    font-size: 0.85em;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🏁 Калькулятор риска питстопов</h1>
+    <p>Сколько времени стоит запас при выезде из питов в картинговом марафоне</p>
+  </header>
+
+  <div class="layout">
+    <section class="card inputs" aria-label="Параметры">
+      <h2>Параметры</h2>
+
+      <div class="field">
+        <label for="n">Количество питстопов, N</label>
+        <div class="input-unit"><input id="n" type="number" inputmode="numeric" min="1" step="1" value="36"><span>шт</span></div>
+      </div>
+
+      <div class="field">
+        <label for="tm">Минимальное время питстопа, Tm</label>
+        <div class="input-unit"><input id="tm" type="number" inputmode="decimal" min="0" step="1" value="150"><span>с</span></div>
+      </div>
+
+      <div class="field">
+        <label for="p">Штраф за короткий питстоп, P</label>
+        <div class="input-unit"><input id="p" type="number" inputmode="decimal" min="0" step="1" value="30"><span>с</span></div>
+      </div>
+
+      <div class="field">
+        <label for="a">Разброс выезда, ±a</label>
+        <div class="input-unit"><input id="a" type="number" inputmode="decimal" min="0" step="0.05" value="0.5"><span>с</span></div>
+        <span class="hint">Полуширина: фактический выезд в пределах ±разброс от целевого момента</span>
+      </div>
+
+      <div class="field">
+        <label>Тип разброса</label>
+        <div class="seg" role="radiogroup">
+          <input type="radio" name="dist" id="dist-normal" value="normal" checked>
+          <label for="dist-normal">Нормальный</label>
+          <input type="radio" name="dist" id="dist-uniform" value="uniform">
+          <label for="dist-uniform">Равномерный</label>
+        </div>
+        <span class="hint" id="dist-hint"></span>
+      </div>
+
+      <div class="field">
+        <label for="d">Запас при выезде, D</label>
+        <div class="input-unit"><input id="d" type="number" inputmode="decimal" min="0" max="5" step="0.05" value="0.5"><span>с</span></div>
+        <input id="d-range" type="range" min="0" max="5" step="0.05" value="0.5" aria-label="Запас при выезде">
+      </div>
+    </section>
+
+    <main>
+      <div class="results" aria-live="polite">
+        <div class="stat">
+          <div class="label">Риск хотя бы одного штрафа</div>
+          <div class="value" id="r-risk">—</div>
+          <div class="sub" id="r-risk-sub">—</div>
+        </div>
+        <div class="stat">
+          <div class="label">Потеря на длинных питстопах</div>
+          <div class="value" id="r-pit">—</div>
+          <div class="sub" id="r-pit-sub">—</div>
+        </div>
+        <div class="stat">
+          <div class="label">Потеря на штрафах</div>
+          <div class="value" id="r-pen">—</div>
+          <div class="sub" id="r-pen-sub">—</div>
+        </div>
+        <div class="stat total">
+          <div class="label">Общее потерянное время</div>
+          <div class="value" id="r-total">—</div>
+          <div class="sub" id="r-total-sub">—</div>
+        </div>
+      </div>
+
+      <section class="card chart-card" aria-label="График">
+        <h2>Общее потерянное время t = F(D)</h2>
+        <div class="chart-box"><canvas id="chart"></canvas></div>
+      </section>
+
+      <details class="method card">
+        <summary>Как считается</summary>
+        <p>Пилот целится выехать через <code>Tm + D</code>. Фактическое время питстопа <code>T = Tm + D + e</code>, где <code>e</code> — случайная ошибка выезда, независимая для каждого питстопа.</p>
+        <ul>
+          <li>Штраф, если <code>T &lt; Tm</code>, то есть <code>e &lt; −D</code>. Вероятность на одном пите — <code>p</code>.</li>
+          <li>Потеря на пите — <code>max(T − Tm, 0)</code>: выигрыш от короткого (штрафного) пита не засчитывается.</li>
+          <li>Риск хотя бы одного штрафа — <code>1 − (1 − p)<sup>N</sup></code>, ожидаемое число штрафов — <code>N·p</code>.</li>
+          <li>Потеря на штрафах — <code>N·p·P</code>. Общая потеря — сумма потерь на питах и штрафах.</li>
+          <li><code>a</code> — заданный разброс выезда (полуширина). Равномерный разброс: <code>e ∈ [−a; +a]</code>.</li>
+          <li>Нормальный разброс: <code>σ = a / 2</code>, то есть ~95% выездов в пределах ±a, а редкие сильные ошибки (замешкался, отвлёкся) всё же возможны. Хвосты не обрезаются.</li>
+        </ul>
+        <p>Расчёт аналитический, без симуляций.</p>
+      </details>
+    </main>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(() => {
+  const D_MAX = 5;
+  const D_STEP = 0.1;
+
+  // Abramowitz–Stegun 7.1.26, |error| < 1.5e-7
+  function erf(x) {
+    const s = Math.sign(x);
+    x = Math.abs(x);
+    const t = 1 / (1 + 0.3275911 * x);
+    const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+    return s * y;
+  }
+  const normCdf = z => 0.5 * (1 + erf(z / Math.SQRT2));
+  const normPdf = z => Math.exp(-0.5 * z * z) / Math.sqrt(2 * Math.PI);
+
+  // Per-pit penalty probability p and expected pit loss E[max(D + e, 0)]
+  function perPit(D, a, dist) {
+    if (a <= 0) return { p: 0, loss: Math.max(D, 0) };
+    if (dist === 'uniform') {
+      const lo = D - a, hi = D + a;
+      if (lo >= 0) return { p: 0, loss: D };
+      if (hi <= 0) return { p: 1, loss: 0 };
+      return { p: -lo / (2 * a), loss: hi * hi / (4 * a) };
+    }
+    const sigma = a / 2;
+    const z = D / sigma;
+    return { p: normCdf(-z), loss: D * normCdf(z) + sigma * normPdf(z) };
+  }
+
+  function compute(params, D) {
+    const { n, pen, a, dist } = params;
+    const { p, loss } = perPit(D, a, dist);
+    const pitLoss = n * loss;
+    const penLoss = n * p * pen;
+    return {
+      p,
+      risk: p >= 1 ? 1 : -Math.expm1(n * Math.log1p(-p)),
+      expected: n * p,
+      pitLoss,
+      penLoss,
+      total: pitLoss + penLoss,
+    };
+  }
+
+  const $ = id => document.getElementById(id);
+  const num = (id, min, fallback) => {
+    const v = parseFloat($(id).value);
+    return Number.isFinite(v) && v >= min ? v : fallback;
+  };
+
+  function readParams() {
+    return {
+      n: Math.round(num('n', 1, 1)),
+      tm: num('tm', 0, 0),
+      pen: num('p', 0, 0),
+      a: num('a', 0, 0),
+      dist: document.querySelector('input[name="dist"]:checked').value,
+      d: Math.min(num('d', 0, 0), D_MAX),
+    };
+  }
+
+  const fmtNum = (v, digits = 2) => v.toLocaleString('ru-RU', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  function fmtTime(sec) {
+    if (sec < 60) return fmtNum(sec, sec < 10 ? 2 : 1) + ' с';
+    const m = Math.floor(sec / 60);
+    const s = sec - m * 60;
+    return m + ':' + s.toFixed(1).padStart(4, '0') + ' мин';
+  }
+  function fmtPct(p) {
+    if (p === 0) return '0%';
+    if (p < 0.0001) return '<0,01%';
+    if (p > 0.9999 && p < 1) return '>99,99%';
+    return fmtNum(p * 100, p < 0.1 ? 2 : 1) + '%';
+  }
+
+  // Chart
+  const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const labels = [];
+  for (let i = 0; i <= Math.round(D_MAX / D_STEP); i++) labels.push(+(i * D_STEP).toFixed(1));
+
+  let chart = null;
+
+  function buildChart() {
+    if (!window.Chart) return;
+    if (chart) chart.destroy();
+    const text = css('--muted');
+    const grid = css('--grid');
+    chart = new Chart($('chart'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Общая потеря', data: [], borderColor: css('--c-total'), backgroundColor: css('--c-total'), borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 4, tension: 0.25, order: 1 },
+          { label: 'На питстопах', data: [], borderColor: css('--c-pit'), backgroundColor: css('--c-pit'), borderWidth: 1.5, borderDash: [5, 4], pointRadius: 0, pointHoverRadius: 3, tension: 0.25, order: 2 },
+          { label: 'На штрафах', data: [], borderColor: css('--c-pen'), backgroundColor: css('--c-pen'), borderWidth: 1.5, borderDash: [5, 4], pointRadius: 0, pointHoverRadius: 3, tension: 0.25, order: 3 },
+          { label: 'Текущий D', type: 'scatter', data: [], borderColor: css('--text'), backgroundColor: css('--surface'), borderWidth: 2, pointRadius: 6, pointHoverRadius: 7, order: 0 },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+          x: {
+            type: 'linear',
+            min: 0,
+            max: D_MAX,
+            title: { display: true, text: 'Запас D, с', color: text },
+            ticks: { color: text, stepSize: 0.5 },
+            grid: { color: grid },
+          },
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: 'Потеря за гонку, с', color: text },
+            ticks: { color: text },
+            grid: { color: grid },
+          },
+        },
+        plugins: {
+          legend: { labels: { color: text, boxWidth: 14, boxHeight: 2, sort: (a, b) => a.datasetIndex - b.datasetIndex } },
+          tooltip: {
+            filter: item => item.datasetIndex !== 3,
+            callbacks: {
+              title: items => 'D = ' + fmtNum(items[0].parsed.x, 1) + ' с',
+              label: item => ' ' + item.dataset.label + ': ' + fmtTime(item.parsed.y),
+            },
+          },
+        },
+      },
+    });
+  }
+
+  function updateChart(params) {
+    if (!chart) return;
+    const total = [], pit = [], pen = [];
+    for (const D of labels) {
+      const r = compute(params, D);
+      total.push({ x: D, y: r.total });
+      pit.push({ x: D, y: r.pitLoss });
+      pen.push({ x: D, y: r.penLoss });
+    }
+    const cur = compute(params, params.d);
+    chart.data.datasets[0].data = total;
+    chart.data.datasets[1].data = pit;
+    chart.data.datasets[2].data = pen;
+    chart.data.datasets[3].data = [{ x: params.d, y: cur.total }];
+    chart.update();
+  }
+
+  function render() {
+    const params = readParams();
+    const r = compute(params, params.d);
+
+    $('r-risk').textContent = fmtPct(r.risk);
+    $('r-risk-sub').textContent = 'ожидается ' + fmtNum(r.expected, 2) + ' шт · ' + fmtPct(r.p) + ' на пит';
+    $('r-pit').textContent = fmtTime(r.pitLoss);
+    $('r-pit-sub').textContent = fmtNum(r.pitLoss / params.n, 2) + ' с на пит';
+    $('r-pen').textContent = fmtTime(r.penLoss);
+    $('r-pen-sub').textContent = fmtNum(r.expected, 2) + ' × ' + fmtNum(params.pen, 0) + ' с';
+    $('r-total').textContent = fmtTime(r.total);
+    $('r-total-sub').textContent = fmtNum(r.total / params.n, 2) + ' с на пит';
+
+    $('dist-hint').textContent = params.dist === 'normal'
+      ? 'σ = ' + fmtNum(params.a / 2, 2) + ' с, ~95% выездов в пределах ±' + fmtNum(params.a, 2) + ' с'
+      : 'Любая ошибка в пределах ±' + fmtNum(params.a, 2) + ' с равновероятна';
+
+    updateChart(params);
+  }
+
+  // Inputs
+  $('d').addEventListener('input', () => { $('d-range').value = $('d').value; render(); });
+  $('d-range').addEventListener('input', () => { $('d').value = $('d-range').value; render(); });
+  for (const id of ['n', 'tm', 'p', 'a']) $(id).addEventListener('input', render);
+  for (const el of document.querySelectorAll('input[name="dist"]')) el.addEventListener('change', render);
+
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { buildChart(); render(); });
+
+  buildChart();
+  render();
+})();
+</script>
+</body>
+</html>
