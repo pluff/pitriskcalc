@@ -262,7 +262,7 @@
 
       <div class="field">
         <label for="a">Диапазон разброса выезда, X</label>
-        <div class="input-unit"><input id="a" type="number" inputmode="decimal" min="0" step="0.05" value="1.3"><span>с</span></div>
+        <div class="input-unit"><input id="a" type="number" inputmode="decimal" min="0" step="0.05" value="1.2"><span>с</span></div>
         <span class="hint">Насколько реальный момент выезда отличается от задуманного. Пилот хочет уехать ровно в целевое время Tt, но реакция, трафик на пит-лейне, постановка карта, старт карта дают ошибку: выезд случается раньше или позже задуманного. X — полная ширина диапазона: выезд в пределах от Tt − X/2 до Tt + X/2. Ошибка случайная и новая на каждом питстопе — заранее её не знаешь.</span>
       </div>
 
@@ -279,8 +279,8 @@
 
       <div class="field">
         <label for="tt">Целевое время выезда, Tt</label>
-        <div class="input-unit"><input id="tt" type="number" inputmode="decimal" min="0" step="0.05" value="150.5"><span>с</span></div>
-        <input id="tt-range" type="range" min="150" max="155" step="0.05" value="150.5" aria-label="Целевое время выезда">
+        <div class="input-unit"><input id="tt" type="number" inputmode="decimal" min="0" step="0.1" value="150.9"><span>с</span></div>
+        <input id="tt-range" type="range" min="150" max="155" step="0.05" value="150.9" aria-label="Целевое время выезда">
         <span class="hint" id="tt-hint"></span>
       </div>
     </section>
@@ -558,10 +558,3 @@
 </script>
 </body>
 </html>
-
-
-
-=S2-AVERAGE(FLATTEN(
-  INDIRECT("P1!I"&XMATCH(N2, 'P1'!J:J, 1)&":I"&(XMATCH(N2, 'P1'!J:J, 1)+R2-1)), 
-  INDIRECT("P2!I"&XMATCH(N2, 'P2'!J:J, 1)&":I"&(XMATCH(N2, 'P2'!J:J, 1)+R2-1)), 
-  INDIRECT("P3!I"&XMATCH(N2, 'P3'!J:J, 1)&":I"&(XMATCH(N2, 'P3'!J:J, 1)+R2-1))))
